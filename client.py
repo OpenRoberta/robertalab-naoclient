@@ -47,7 +47,7 @@ class RestClient():
                  firmware_version='v2-1-4-3', robot_name='nao'):
         self.DEBUG = True
         self.EASTER_EGG = False
-        self.GENERATE_TOKEN = True
+        self.GENERATE_TOKEN = False
         self.tts = ALProxy("ALTextToSpeech", "0.0.0.0", 9559)
         self.parameterString = "\\RSPD=90\\ "
         self.token_length = token_length
@@ -172,11 +172,15 @@ class RestClient():
             print('Robot token: ' + self.token_from_mac)
             for letter in self.token_from_mac.lower():
                 self.tts.say(self.parameterString + letter + '\\RST\\')
+            self.command['token'] = self.token_from_mac
         if(self.EASTER_EGG):
-            f = open('quotes', 'r')
-            quotes = f.readlines()
-            quote = quotes[random.randint(0, len(quotes)-1)]
-            self.tts.say(quote)
+            try:
+                f = open('quotes', 'r')
+                quotes = f.readlines()
+                quote = quotes[random.randint(0, len(quotes)-1)]
+                self.tts.say(quote)
+            except IOError:
+                print('A cake was a lie =(')
         self.command['cmd'] = self.REGISTER
         register_command = json.dumps(self.command)
         try:

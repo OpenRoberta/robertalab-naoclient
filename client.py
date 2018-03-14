@@ -9,7 +9,7 @@ It defines nao - server communication
 @copyright:  2017 Fraunhofer IAIS.
 @license:    GPL 3.0
 @contact:    artem.vinokurov@iais.fraunhofer.de
-@deffield    updated: 14 Feb. 2018
+@deffield    updated: 14 Mar. 2018
 '''
 
 from subprocess import call
@@ -22,6 +22,8 @@ from uuid import getnode as get_mac
 import datetime
 import time
 import zipfile
+from naoqi import ALProxy
+
 
 class RestClient():
     '''
@@ -44,6 +46,8 @@ class RestClient():
     def __init__(self, token_length=8, lab_address='https://test.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
         self.DEBUG = True
+        self.tts = ALProxy("ALTextToSpeech", "0.0.0.0", 9559)
+        self.parameterString = "\\RSPD=60\\ "
         self.token_length = token_length
         self.lab_address = lab_address
         self.firmware_name = 'Nao'
@@ -160,7 +164,8 @@ class RestClient():
         token_to_say = ""
         for letter in self.token:
             token_to_say += letter + " "
-        call(['python', 'say.py', token_to_say])
+        # call(['python', 'say.py', token_to_say])
+        self.tts.say("Current token is " + self.parameterString + token_to_say + "\\RST\\")
         self.command['cmd'] = self.REGISTER
         register_command = json.dumps(self.command)
         try:
@@ -185,4 +190,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        exit(0)
+        exit(0) 

@@ -1,36 +1,36 @@
-#!/usr/bin/python
-# encoding: utf-8
-'''
-naoclient.client -- shortdesc
-naoclient.client is an OpenRoberta rest client
-It defines nao - server communication
-
-@author:     Artem Vinokurov
-@copyright:  2017 Fraunhofer IAIS.
-@license:    GPL 3.0
-@contact:    artem.vinokurov@iais.fraunhofer.de
-@deffield    updated: 14 Mar. 2018
-'''
-
-from subprocess import call
-import json
-import random
-import string
-from requests import Request, Session
-from requests.exceptions import ConnectionError
-from uuid import getnode as get_mac
-import datetime
-import time
-import zipfile
-from naoqi import ALProxy
-
-
-class RestClient():
-    '''
-    REST endpoints:
-    /rest/pushcmd (controlling the workflow of the system)
-    /rest/download (the user program can be downloaded here)
-    /rest/update/ (updates for libraries on the robot can be downloaded here)
+#!/usr/bin/python                                                                                                                                                                                                                           
+# encoding: utf-8                                                                                                                                                                                                                           
+'''                                                                                                                                                                                                                                         
+naoclient.client -- shortdesc                                                                                                                                                                                                               
+naoclient.client is an OpenRoberta rest client                                                                                                                                                                                              
+It defines nao - server communication                                                                                                                                                                                                       
+                                                                                                                                                                                                                                            
+@author:     Artem Vinokurov                                                                                                                                                                                                                
+@copyright:  2017 Fraunhofer IAIS.                                                                                                                                                                                                          
+@license:    GPL 3.0                                                                                                                                                                                                                        
+@contact:    artem.vinokurov@iais.fraunhofer.de                                                                                                                                                                                             
+@deffield    updated: 14 Mar. 2018                                                                                                                                                                                                          
+'''                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                            
+from subprocess import call                                                                                                                                                                                                                 
+import json                                                                                                                                                                                                                                 
+import random                                                                                                                                                                                                                               
+import string                                                                                                                                                                                                                               
+from requests import Request, Session                                                                                                                                                                                                       
+from requests.exceptions import ConnectionError                                                                                                                                                                                             
+from uuid import getnode as get_mac                                                                                                                                                                                                         
+import datetime                                                                                                                                                                                                                             
+import time                                                                                                                                                                                                                                 
+import zipfile                                                                                                                                                                                                                              
+from naoqi import ALProxy                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                            
+class RestClient():                                                                                                                                                                                                                         
+    '''                                                                                                                                                                                                                                     
+    REST endpoints:                                                                                                                                                                                                                         
+    /rest/pushcmd (controlling the workflow of the system)                                                                                                                                                                                  
+    /rest/download (the user program can be downloaded here)                                                                                                                                                                                
+    /rest/update/ (updates for libraries on the robot can be downloaded here)                                                                                                                                                               
     /update/nao/v2-1-4-3/hal - GET new hal
     /update/nao/v2-1-4-3/hal/checksum - GET hal checksum
     '''
@@ -62,6 +62,9 @@ class RestClient():
         self.token_from_mac = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
         self.token = self.generate_token()
         self.last_exit_code = '0'
+        self.update_attempts = 12 # 2 minutes of attempts
+        self.working_directory = '/home/nao/client/'
+        self.debug_log_file = open(self.working_directory + 'ora_client.debug', 'w')
         self.command = {
                             'firmwarename': self.firmware_name,
                             'robot': self.robot_name,
@@ -75,32 +78,51 @@ class RestClient():
                             'nepoexitvalue': self.last_exit_code
                         }        
     
-    def get_checksum(self):
-        nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
-        nao_prepared_request = nao_request.prepare()
-        server_response = self.nao_session.send(nao_prepared_request)
-        return server_response.content
+    def get_checksum(self, attempts_left):
+        if (attempts_left < 1):
+            self.log('update server unavailable (cannot get checksum), shutting down open roberta client')
+            self.tts.say('OpenRoberta server unavailable, client is shutting down. Check my connection to OpenRoberta and restart the client by rebooting me, or restarting from console.')
+            exit(0)
+        try:
+            nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
+            nao_prepared_request = nao_request.prepare()
+            server_response = self.nao_session.send(nao_prepared_request)
+            return server_response.content
+        except ConnectionError:
+            self.log('update server unavailable, sleeping for 10 seconds before next attempt')
+            time.sleep(10)
+            return self.get_checksum(attempts_left - 1)
 
     def update_firmware(self):
-        checksum = self.get_checksum()
+        checksum = self.get_checksum(self.update_attempts)
+        hash_file_name = self.working_directory + 'firmware.hash'
         try:
-            f = open('firmware.hash', 'r')
+            f = open(hash_file_name, 'r')
         except IOError:
-            f = open('firmware.hash', 'w')
+            f = open(hash_file_name, 'w')
             f.write('NOHASH')
-        f = open('firmware.hash', 'r')
+        f = open(hash_file_name, 'r')
         hash_value = f.readline()
         if hash_value != checksum:
             self.log('updating hal library')
             nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal')
             nao_prepared_request = nao_request.prepare()
             server_response = self.nao_session.send(nao_prepared_request)
-            with open(server_response.headers['Filename'], 'w') as f:
-                f.write(server_response.content)
+            try:
+                with open(server_response.headers['Filename'], 'w') as f:
+                    f.write(server_response.content)
+            except KeyError:
+                if hash_value != 'NOHASH':
+                    self.log('no update file was found on the server, however server is up, continuing with old hal')
+                    return
+                else:
+                    self.log('no update file was found on the server and no hal present, shutting down client')
+                    self.tts.say('Sorry, hal update error occurred and no hal present, have to quit for now. Try again later.')
+                    exit(0)
             zip_ref = zipfile.ZipFile(server_response.headers['Filename'], 'r')
-            zip_ref.extractall('./')
+            zip_ref.extractall(self.working_directory)
             zip_ref.close()
-            f = open('firmware.hash', 'w')
+            f = open(hash_file_name, 'w')
             f.write(checksum)
             self.log('hal library updated, checksum written: ' + checksum)
         else:
@@ -109,6 +131,7 @@ class RestClient():
     def log(self, message):
         if self.DEBUG:
             print '[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message
+            self.debug_log_file.write('[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message + '\n')
     
     def generate_token(self):
         return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
@@ -174,13 +197,10 @@ class RestClient():
                 self.tts.say(self.parameterString + letter + '\\RST\\')
             self.command['token'] = self.token_from_mac
         if(self.EASTER_EGG):
-            try:
-                f = open('quotes', 'r')
-                quotes = f.readlines()
-                quote = quotes[random.randint(0, len(quotes)-1)]
-                self.tts.say(quote)
-            except IOError:
-                print('A cake was a lie =(')
+            f = open('quotes', 'r')
+            quotes = f.readlines()
+            quote = quotes[random.randint(0, len(quotes)-1)]
+            self.tts.say(quote)
         self.command['cmd'] = self.REGISTER
         register_command = json.dumps(self.command)
         try:

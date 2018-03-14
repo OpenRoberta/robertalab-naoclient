@@ -46,8 +46,10 @@ class RestClient():
     def __init__(self, token_length=8, lab_address='https://test.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
         self.DEBUG = True
+        self.EASTER_EGG = False
+        self.GENERATE_TOKEN = True
         self.tts = ALProxy("ALTextToSpeech", "0.0.0.0", 9559)
-        self.parameterString = "\\RSPD=60\\ "
+        self.parameterString = "\\RSPD=90\\ "
         self.token_length = token_length
         self.lab_address = lab_address
         self.firmware_name = 'Nao'
@@ -57,6 +59,7 @@ class RestClient():
         self.menu_version = '0.0.1'
         self.nao_session = Session()
         self.mac_address = '-'.join(('%012X' % get_mac())[i:i+2] for i in range(0, 12, 2))
+        self.token_from_mac = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
         self.token = self.generate_token()
         self.last_exit_code = '0'
         self.command = {
@@ -160,12 +163,20 @@ class RestClient():
     
     
     def connect(self):
-        print 'robot token: ' + self.token
-        token_to_say = ""
-        for letter in self.token:
-            token_to_say += letter + " "
-        # call(['python', 'say.py', token_to_say])
-        self.tts.say("Current token is " + self.parameterString + token_to_say + "\\RST\\")
+        self.tts.say("My token is ")
+        if (self.GENERATE_TOKEN):
+            print 'Robot token: ' + self.token
+            for letter in self.token:
+                self.tts.say(self.parameterString + letter + '\\RST\\')
+        else:
+            print('Robot token: ' + self.token_from_mac)
+            for letter in self.token_from_mac.lower():
+                self.tts.say(self.parameterString + letter + '\\RST\\')
+        if(self.EASTER_EGG):
+            f = open('quotes', 'r')
+            quotes = f.readlines()
+            quote = quotes[random.randint(0, len(quotes)-1)]
+            self.tts.say(quote)
         self.command['cmd'] = self.REGISTER
         register_command = json.dumps(self.command)
         try:
@@ -190,4 +201,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        exit(0) 
+        exit(0)

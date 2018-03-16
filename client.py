@@ -25,7 +25,7 @@ import zipfile
 from naoqi import ALProxy
 from naoqi import ALBroker
 from naoqi import ALModule
-import argparse
+from ConfigParser import SafeConfigParser
 
 # Global variable to store the ReactToTouch module instance
 reactToTouch = None
@@ -76,6 +76,7 @@ class RestClient():
     
     def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
+        self.working_directory = '/home/nao/OpenRobertaClient/'
         self.initialize_broker()
         self.DEBUG = True
         self.EASTER_EGG = False
@@ -91,10 +92,11 @@ class RestClient():
         self.nao_session = Session()
         self.mac_address = '-'.join(('%012X' % get_mac())[i:i+2] for i in range(0, 12, 2))
         self.token = self.generate_token()
+        self.language = self.tts.getLanguage()
         self.last_exit_code = '0'
         self.update_attempts = 36 # 6 minutes of attempts
-        self.working_directory = '/home/nao/OpenRobertaClient/'
         self.debug_log_file = open(self.working_directory + 'ora_client.debug', 'w')
+        self.initialize_translations()
         self.command = {
                             'firmwarename': self.firmware_name,
                             'robot': self.robot_name,
@@ -118,10 +120,17 @@ class RestClient():
         global reactToTouch
         reactToTouch = ReactToTouch("reactToTouch")
     
+    def initialize_translations(self):
+        parser = SafeConfigParser()
+        parser.read(self.working_directory + 'translations.ini')
+        self.TOKEN_SAY = parser.get(self.language, 'TOKEN_SAY')
+        self.UPDATE_SERVER_DOWN_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_SAY')
+        self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
+    
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
             self.log('update server unavailable (cannot get checksum), shutting down open roberta client')
-            self.tts.say('OpenRoberta server unavailable. Check my connection to OpenRoberta and network connection, I will continue trying to connect')
+            self.tts.say(self.UPDATE_SERVER_DOWN_SAY)
             attempts_left = 36 # 6 minutes more of attempts
         try:
             nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
@@ -157,7 +166,7 @@ class RestClient():
                     return
                 else:
                     self.log('no update file was found on the server and no hal present, shutting down client')
-                    self.tts.say('Sorry, hal update error occurred and no hal present, have to quit for now. Try again later.')
+                    self.tts.say(self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY)
                     exit(0)
             zip_ref = zipfile.ZipFile(server_response.headers['Filename'], 'r')
             zip_ref.extractall(self.working_directory)
@@ -227,15 +236,14 @@ class RestClient():
             else:
                 pass
         except ConnectionError:
-            self.log('Server unavailable')
+            self.log('Server unavailable, waiting 10 seconds to reconnect.')
             time.sleep(10)
             self.connect()
         self.send_push_request()
     
-    
     def connect(self):
-        self.tts.say("My token is ")
-        print 'Robot token: ' + self.token
+        self.tts.say(self.TOKEN_SAY)
+        self.log('Robot token: ' + self.token)
         for letter in self.token:
             self.tts.say(self.parameterString + letter + '\\RST\\')
         if(self.EASTER_EGG):

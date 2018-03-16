@@ -27,21 +27,15 @@ from naoqi import ALBroker
 from naoqi import ALModule
 from ConfigParser import SafeConfigParser
 
-# Global variable to store the ReactToTouch module instance
 reactToTouch = None
 memory = None
 TOKEN = ""
+TOKEN_GREETING = ""
 
 class ReactToTouch(ALModule):
     def __init__(self, name):
         ALModule.__init__(self, name)
-        # No need for IP and port here because
-        # we have our Python broker connected to NAOqi broker
-
-        # Create a proxy to ALTextToSpeech for later use
         self.tts = ALProxy("ALTextToSpeech")
-
-        # Subscribe to TouchChanged event:
         global memory
         memory = ALProxy("ALMemory")
         memory.subscribeToEvent("TouchChanged",
@@ -51,6 +45,7 @@ class ReactToTouch(ALModule):
     def onTouched(self, strVarName, value):
         if 'Head/Touch' in value[0][0]:
             memory.unsubscribeToEvent("TouchChanged", "reactToTouch")
+            self.tts.say(TOKEN_GREETING)
             for letter in TOKEN.lower():
                 self.tts.say(letter)
             memory.subscribeToEvent("TouchChanged", "reactToTouch", "onTouched")
@@ -64,8 +59,7 @@ class RestClient():
     /rest/update/ (updates for libraries on the robot can be downloaded here)                                                                                                                                                               
     /update/nao/v2-1-4-3/hal - GET new hal
     /update/nao/v2-1-4-3/hal/checksum - GET hal checksum
-    '''
-    
+    '''    
     REGISTER = 'register'
     PUSH = 'push'
     REPEAT = 'repeat'
@@ -81,12 +75,11 @@ class RestClient():
         self.DEBUG = True
         self.EASTER_EGG = False
         self.GENERATE_TOKEN = False
-        self.parameterString = "\\RSPD=100\\ "
         self.token_length = token_length
         self.lab_address = lab_address
         self.firmware_name = 'Nao'
         self.firmware_version = firmware_version
-        self.brick_name = robot_name
+        self.brick_name = self.system.robotName()
         self.robot_name = robot_name
         self.menu_version = '0.0.1'
         self.nao_session = Session()
@@ -117,6 +110,7 @@ class RestClient():
                                  9559)  # parent broker port
         self.tts = ALProxy("ALTextToSpeech")
         self.power = ALProxy("ALBattery")
+        self.system = ALProxy("ALSystem")
         global reactToTouch
         reactToTouch = ReactToTouch("reactToTouch")
     
@@ -124,6 +118,8 @@ class RestClient():
         parser = SafeConfigParser()
         parser.read(self.working_directory + 'translations.ini')
         self.TOKEN_SAY = parser.get(self.language, 'TOKEN_SAY')
+        global TOKEN_GREETING
+        TOKEN_GREETING = self.TOKEN_SAY
         self.UPDATE_SERVER_DOWN_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_SAY')
         self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
     
@@ -244,8 +240,8 @@ class RestClient():
     def connect(self):
         self.tts.say(self.TOKEN_SAY)
         self.log('Robot token: ' + self.token)
-        for letter in self.token:
-            self.tts.say(self.parameterString + letter + '\\RST\\')
+        for letter in self.token.lower():
+            self.tts.say(letter)
         if(self.EASTER_EGG):
             f = open('quotes', 'r')
             quotes = f.readlines()
@@ -274,6 +270,5 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, KeyError) as e:
         exit(0)
-

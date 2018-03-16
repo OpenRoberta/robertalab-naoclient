@@ -22,8 +22,39 @@ from uuid import getnode as get_mac
 import datetime                                                                                                                                                                                                                             
 import time                                                                                                                                                                                                                                 
 import zipfile                                                                                                                                                                                                                              
-from naoqi import ALProxy                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                            
+from naoqi import ALProxy
+from naoqi import ALBroker
+from naoqi import ALModule
+import argparse
+
+# Global variable to store the ReactToTouch module instance
+reactToTouch = None
+memory = None
+TOKEN = ""
+
+class ReactToTouch(ALModule):
+    def __init__(self, name):
+        ALModule.__init__(self, name)
+        # No need for IP and port here because
+        # we have our Python broker connected to NAOqi broker
+
+        # Create a proxy to ALTextToSpeech for later use
+        self.tts = ALProxy("ALTextToSpeech")
+
+        # Subscribe to TouchChanged event:
+        global memory
+        memory = ALProxy("ALMemory")
+        memory.subscribeToEvent("TouchChanged",
+            "reactToTouch",
+            "onTouched")
+
+    def onTouched(self, strVarName, value):
+        if 'Head/Touch' in value[0][0]:
+            memory.unsubscribeToEvent("TouchChanged", "reactToTouch")
+            for letter in TOKEN.lower():
+                self.tts.say(letter)
+            memory.subscribeToEvent("TouchChanged", "reactToTouch", "onTouched")
+
                                                                                                                                                                                                                                             
 class RestClient():                                                                                                                                                                                                                         
     '''                                                                                                                                                                                                                                     
@@ -43,13 +74,13 @@ class RestClient():
     DOWNLOAD = 'download'
     CONFIGURATION = 'configuration' #not yet used
     
-    def __init__(self, token_length=8, lab_address='https://test.open-roberta.org/', 
+    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
+        self.initializeNAO()
         self.DEBUG = True
         self.EASTER_EGG = False
         self.GENERATE_TOKEN = False
-        self.tts = ALProxy("ALTextToSpeech", "0.0.0.0", 9559)
-        self.parameterString = "\\RSPD=90\\ "
+        self.parameterString = "\\RSPD=100\\ "
         self.token_length = token_length
         self.lab_address = lab_address
         self.firmware_name = 'Nao'
@@ -61,9 +92,14 @@ class RestClient():
         self.mac_address = '-'.join(('%012X' % get_mac())[i:i+2] for i in range(0, 12, 2))
         self.token_from_mac = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
         self.token = self.generate_token()
+        global TOKEN
+        if(self.GENERATE_TOKEN):
+            TOKEN = self.token
+        else:
+            TOKEN = self.token_from_mac
         self.last_exit_code = '0'
-        self.update_attempts = 12 # 2 minutes of attempts
-        self.working_directory = '/home/nao/client/'
+        self.update_attempts = 36 # 6 minutes of attempts
+        self.working_directory = '/home/nao/OpenRobertaClient/'
         self.debug_log_file = open(self.working_directory + 'ora_client.debug', 'w')
         self.command = {
                             'firmwarename': self.firmware_name,
@@ -77,6 +113,17 @@ class RestClient():
                             'menuversion': self.menu_version,
                             'nepoexitvalue': self.last_exit_code
                         }        
+    
+    def initializeNAO(self):
+        self.myBroker = ALBroker("myBroker", "0.0.0.0",  # Listen to anyone
+                                 0,  # find a free port and use it
+                                 "",  # parent broker ip
+                                 9559)  # parent broker port
+        self.tts = ALProxy("ALTextToSpeech")
+        self.memory = ALProxy("ALMemory")
+        self.mark = ALProxy("ALLandMarkDetection")
+        global reactToTouch
+        reactToTouch = ReactToTouch("reactToTouch")
     
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
@@ -155,12 +202,14 @@ class RestClient():
         with open(program_name, 'w') as f:
             f.write(server_response.content)
         self.log('program downloaded, filename: ' + program_name)
+        self.myBroker.shutdown()
         try:
             call(['python', program_name])
             self.last_exit_code = '0'
         except Exception:
             self.last_exit_code = '2'
             self.log('cannot execute program')
+        self.initializeNAO()
     
     def send_push_request(self):
         self.log('started polling at ' + str(datetime.datetime.now()))
@@ -226,3 +275,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         exit(0)
+

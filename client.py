@@ -9,7 +9,7 @@ It defines nao - server communication
 @copyright:  2017 Fraunhofer IAIS.                                                                                                                                                                                                          
 @license:    GPL 3.0                                                                                                                                                                                                                        
 @contact:    artem.vinokurov@iais.fraunhofer.de                                                                                                                                                                                             
-@deffield    updated: 14 Mar. 2018                                                                                                                                                                                                          
+@deffield    updated: 16 Mar. 2018                                                                                                                                                                                                          
 '''                                                                                                                                                                                                                                         
                                                                                                                                                                                                                                             
 from subprocess import call                                                                                                                                                                                                                 
@@ -76,7 +76,7 @@ class RestClient():
     
     def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
-        self.initializeNAO()
+        self.initialize_broker()
         self.DEBUG = True
         self.EASTER_EGG = False
         self.GENERATE_TOKEN = False
@@ -90,13 +90,7 @@ class RestClient():
         self.menu_version = '0.0.1'
         self.nao_session = Session()
         self.mac_address = '-'.join(('%012X' % get_mac())[i:i+2] for i in range(0, 12, 2))
-        self.token_from_mac = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
         self.token = self.generate_token()
-        global TOKEN
-        if(self.GENERATE_TOKEN):
-            TOKEN = self.token
-        else:
-            TOKEN = self.token_from_mac
         self.last_exit_code = '0'
         self.update_attempts = 36 # 6 minutes of attempts
         self.working_directory = '/home/nao/OpenRobertaClient/'
@@ -114,22 +108,21 @@ class RestClient():
                             'nepoexitvalue': self.last_exit_code
                         }        
     
-    def initializeNAO(self):
+    def initialize_broker(self):
         self.myBroker = ALBroker("myBroker", "0.0.0.0",  # Listen to anyone
                                  0,  # find a free port and use it
                                  "",  # parent broker ip
                                  9559)  # parent broker port
         self.tts = ALProxy("ALTextToSpeech")
-        self.memory = ALProxy("ALMemory")
-        self.mark = ALProxy("ALLandMarkDetection")
+        self.power = ALProxy("ALBattery")
         global reactToTouch
         reactToTouch = ReactToTouch("reactToTouch")
     
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
             self.log('update server unavailable (cannot get checksum), shutting down open roberta client')
-            self.tts.say('OpenRoberta server unavailable, client is shutting down. Check my connection to OpenRoberta and restart the client by rebooting me, or restarting from console.')
-            exit(0)
+            self.tts.say('OpenRoberta server unavailable. Check my connection to OpenRoberta and network connection, I will continue trying to connect')
+            attempts_left = 36 # 6 minutes more of attempts
         try:
             nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
             nao_prepared_request = nao_request.prepare()
@@ -181,10 +174,16 @@ class RestClient():
             self.debug_log_file.write('[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message + '\n')
     
     def generate_token(self):
-        return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+        global TOKEN
+        if(self.GENERATE_TOKEN):
+            TOKEN = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+            return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+        else:
+            TOKEN = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
+            return ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
     
     def get_battery_level(self):
-        return '8.4'
+        return self.power.getBatteryCharge()
             
     def send_post(self, command, endpoint):
         nao_request = Request('POST', self.lab_address + endpoint)
@@ -209,7 +208,7 @@ class RestClient():
         except Exception:
             self.last_exit_code = '2'
             self.log('cannot execute program')
-        self.initializeNAO()
+        self.initialize_broker()
     
     def send_push_request(self):
         self.log('started polling at ' + str(datetime.datetime.now()))
@@ -236,15 +235,9 @@ class RestClient():
     
     def connect(self):
         self.tts.say("My token is ")
-        if (self.GENERATE_TOKEN):
-            print 'Robot token: ' + self.token
-            for letter in self.token:
-                self.tts.say(self.parameterString + letter + '\\RST\\')
-        else:
-            print('Robot token: ' + self.token_from_mac)
-            for letter in self.token_from_mac.lower():
-                self.tts.say(self.parameterString + letter + '\\RST\\')
-            self.command['token'] = self.token_from_mac
+        print 'Robot token: ' + self.token
+        for letter in self.token:
+            self.tts.say(self.parameterString + letter + '\\RST\\')
         if(self.EASTER_EGG):
             f = open('quotes', 'r')
             quotes = f.readlines()

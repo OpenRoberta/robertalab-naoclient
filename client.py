@@ -26,6 +26,7 @@ from naoqi import ALProxy
 from naoqi import ALBroker
 from naoqi import ALModule
 from ConfigParser import SafeConfigParser
+import os
 
 reactToTouch = None
 memory = None
@@ -71,6 +72,7 @@ class RestClient():
     def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
         self.working_directory = '/home/nao/OpenRobertaClient/'
+        os.chdir(self.working_directory)
         self.initialize_broker()
         self.DEBUG = True
         self.EASTER_EGG = False
@@ -202,10 +204,10 @@ class RestClient():
         self.command['nepoexitvalue'] = '0'
         download_command = json.dumps(self.command)
         server_response = self.send_post(download_command, '/download')
-        program_name = server_response.headers['Filename']
+        program_name = self.working_directory + server_response.headers['Filename']
         with open(program_name, 'w') as f:
             f.write(server_response.content)
-        self.log('program downloaded, filename: ' + program_name)
+        self.log('program downloaded, filename: ' + server_response.headers['Filename'])
         self.myBroker.shutdown()
         try:
             call(['python', program_name])

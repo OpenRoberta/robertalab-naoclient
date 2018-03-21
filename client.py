@@ -28,10 +28,8 @@ from naoqi import ALModule
 from ConfigParser import SafeConfigParser
 import os
 
-reactToTouch = None
+REACT_TO_TOUCH = None
 memory = None
-TOKEN = ""
-TOKEN_GREETING = ""
 
 class ReactToTouch(ALModule):
     def __init__(self, name):
@@ -40,16 +38,22 @@ class ReactToTouch(ALModule):
         global memory
         memory = ALProxy("ALMemory")
         memory.subscribeToEvent("TouchChanged",
-            "reactToTouch",
-            "onTouched")
+            "REACT_TO_TOUCH",
+            "on_touched")
+        
+    def set_token(self, token):
+        self.token = token
+        
+    def set_token_greeting(self, greeting):
+        self.token_greeting = greeting
 
-    def onTouched(self, strVarName, value):
+    def on_touched(self, strVarName, value):
         if 'Head/Touch' in value[0][0]:
-            memory.unsubscribeToEvent("TouchChanged", "reactToTouch")
-            self.tts.say(TOKEN_GREETING)
+            memory.unsubscribeToEvent("TouchChanged", "REACT_TO_TOUCH")
+            self.tts.say(self.token_greeting)
             for letter in TOKEN.lower():
                 self.tts.say(letter)
-            memory.subscribeToEvent("TouchChanged", "reactToTouch", "onTouched")
+            memory.subscribeToEvent("TouchChanged", "REACT_TO_TOUCH", "on_touched")
 
                                                                                                                                                                                                                                             
 class RestClient():                                                                                                                                                                                                                         
@@ -106,22 +110,19 @@ class RestClient():
                         }        
     
     def initialize_broker(self):
-        self.myBroker = ALBroker("myBroker", "0.0.0.0",  # Listen to anyone
-                                 0,  # find a free port and use it
-                                 "",  # parent broker ip
-                                 9559)  # parent broker port
+        self.myBroker = ALBroker("myBroker", "0.0.0.0", 0, "", 9559)
         self.tts = ALProxy("ALTextToSpeech")
         self.power = ALProxy("ALBattery")
         self.system = ALProxy("ALSystem")
-        global reactToTouch
-        reactToTouch = ReactToTouch("reactToTouch")
+        global REACT_TO_TOUCH
+        REACT_TO_TOUCH = ReactToTouch("REACT_TO_TOUCH")
     
     def initialize_translations(self):
         parser = SafeConfigParser()
         parser.read(self.working_directory + 'translations.ini')
         self.TOKEN_SAY = parser.get(self.language, 'TOKEN_SAY')
-        global TOKEN_GREETING
-        TOKEN_GREETING = self.TOKEN_SAY
+        global REACT_TO_TOUCH
+        REACT_TO_TOUCH.set_token_greeting(self.TOKEN_SAY)
         self.UPDATE_SERVER_DOWN_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_SAY')
         self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
     
@@ -181,12 +182,12 @@ class RestClient():
             self.debug_log_file.write('[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message + '\n')
     
     def generate_token(self):
-        global TOKEN
+        global REACT_TO_TOUCH
         if(self.GENERATE_TOKEN):
-            TOKEN = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+            REACT_TO_TOUCH.set_token(''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length)))
             return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
         else:
-            TOKEN = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
+            REACT_TO_TOUCH.set_token(''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2)))
             return ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
     
     def get_battery_level(self):

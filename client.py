@@ -9,7 +9,7 @@ It defines nao - server communication
 @copyright:  2017 Fraunhofer IAIS.                                                                                                                                                                                                          
 @license:    GPL 3.0                                                                                                                                                                                                                        
 @contact:    artem.vinokurov@iais.fraunhofer.de                                                                                                                                                                                             
-@deffield    updated: 16 Mar. 2018                                                                                                                                                                                                          
+@deffield    updated: 23 Mar. 2018                                                                                                                                                                                                          
 '''                                                                                                                                                                                                                                         
                                                                                                                                                                                                                                             
 from subprocess import call                                                                                                                                                                                                                 
@@ -128,7 +128,7 @@ class RestClient():
     
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
-            self.log('update server unavailable (cannot get checksum), shutting down open roberta client')
+            self.log('update server unavailable (cannot get checksum), re-setting number of attempts and continuing further')
             self.tts.say(self.UPDATE_SERVER_DOWN_SAY)
             attempts_left = 36 # 6 minutes more of attempts
         try:
@@ -211,11 +211,13 @@ class RestClient():
         self.log('program downloaded, filename: ' + server_response.headers['Filename'])
         self.myBroker.shutdown()
         try:
+            self.log('starting user program execution')
             call(['python', program_name])
+            self.log('user program execution finished')
             self.last_exit_code = '0'
         except Exception:
             self.last_exit_code = '2'
-            self.log('cannot execute program')
+            self.log('cannot execute user program')
         self.initialize_broker()
     
     def send_push_request(self):
@@ -266,7 +268,7 @@ class RestClient():
             self.connect()
         
 def main():
-    rc = RestClient(lab_address='http://10.116.20.62:1999')
+    rc = RestClient(lab_address='https://test.open-roberta.org/')
     rc.update_firmware()
     rc.connect()
     

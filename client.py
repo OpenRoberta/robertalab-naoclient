@@ -9,11 +9,12 @@ It defines nao - server communication
 @copyright:  2017 Fraunhofer IAIS.                                                                                                                                                                                                          
 @license:    GPL 3.0                                                                                                                                                                                                                        
 @contact:    artem.vinokurov@iais.fraunhofer.de                                                                                                                                                                                             
-@deffield    updated: 23 Mar. 2018                                                                                                                                                                                                          
+@deffield    updated: 5 Apr. 2018                                                                                                                                                                                                          
 '''                                                                                                                                                                                                                                         
                                                                                                                                                                                                                                             
 from subprocess import call                                                                                                                                                                                                                 
-import json                                                                                                                                                                                                                                 
+import json
+from simplejson.decoder import JSONDecodeError
 import random                                                                                                                                                                                                                               
 import string                                                                                                                                                                                                                               
 from requests import Request, Session                                                                                                                                                                                                       
@@ -51,7 +52,7 @@ class ReactToTouch(ALModule):
         if 'Head/Touch' in value[0][0]:
             memory.unsubscribeToEvent("TouchChanged", "REACT_TO_TOUCH")
             self.tts.say(self.token_greeting)
-            for letter in TOKEN.lower():
+            for letter in self.token.lower():
                 self.tts.say(letter)
             memory.subscribeToEvent("TouchChanged", "REACT_TO_TOUCH", "on_touched")
 
@@ -81,6 +82,7 @@ class RestClient():
         self.DEBUG = True
         self.EASTER_EGG = False
         self.GENERATE_TOKEN = False
+        self.SSL_VERIFY = False
         self.token_length = token_length
         self.lab_address = lab_address
         self.firmware_name = 'Nao'
@@ -125,6 +127,8 @@ class RestClient():
         REACT_TO_TOUCH.set_token_greeting(self.TOKEN_SAY)
         self.UPDATE_SERVER_DOWN_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_SAY')
         self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
+        self.INITIAL_GREETING = parser.get(self.language, 'INITIAL_GREETING')
+        self.TOKEN_GREETING = parser.get(self.language, 'TOKEN_GREETING')
     
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
@@ -134,7 +138,7 @@ class RestClient():
         try:
             nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
             nao_prepared_request = nao_request.prepare()
-            server_response = self.nao_session.send(nao_prepared_request)
+            server_response = self.nao_session.send(nao_prepared_request, verify=self.SSL_VERIFY)
             return server_response.content
         except ConnectionError:
             self.log('update server unavailable, sleeping for 10 seconds before next attempt')
@@ -155,7 +159,7 @@ class RestClient():
             self.log('updating hal library')
             nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal')
             nao_prepared_request = nao_request.prepare()
-            server_response = self.nao_session.send(nao_prepared_request)
+            server_response = self.nao_session.send(nao_prepared_request, verify=self.SSL_VERIFY)
             try:
                 with open(server_response.headers['Filename'], 'w') as f:
                     f.write(server_response.content)
@@ -184,11 +188,13 @@ class RestClient():
     def generate_token(self):
         global REACT_TO_TOUCH
         if(self.GENERATE_TOKEN):
-            REACT_TO_TOUCH.set_token(''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length)))
-            return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+            token = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+            REACT_TO_TOUCH.set_token(token)
+            return token
         else:
-            REACT_TO_TOUCH.set_token(''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2)))
-            return ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
+            token = ''.join(('%08X' % get_mac())[i:i+2] for i in range(4, 12, 2))
+            REACT_TO_TOUCH.set_token(token)
+            return token
     
     def get_battery_level(self):
         return self.power.getBatteryCharge()
@@ -198,7 +204,7 @@ class RestClient():
         nao_request.data = command
         nao_request.headers['Content-Type'] = 'application/json'
         nao_prepared_request = nao_request.prepare()
-        return self.nao_session.send(nao_prepared_request)
+        return self.nao_session.send(nao_prepared_request, verify=self.SSL_VERIFY)
     
     def download_and_execute_program(self):
         self.command['cmd'] = self.DOWNLOAD
@@ -243,10 +249,7 @@ class RestClient():
         self.send_push_request()
     
     def connect(self):
-        self.tts.say(self.TOKEN_SAY)
         self.log('Robot token: ' + self.token)
-        for letter in self.token.lower():
-            self.tts.say(letter)
         if(self.EASTER_EGG):
             f = open('quotes', 'r')
             quotes = f.readlines()
@@ -266,10 +269,16 @@ class RestClient():
             self.log('Server unavailable, reconnecting in 10 seconds...')
             time.sleep(10)
             self.connect()
+        except JSONDecodeError:
+            self.log('JSON decoding error (robot was not registered within timeout), reconnecting in 10 seconds...')
+            time.sleep(10)
+            self.connect()
         
 def main():
     rc = RestClient(lab_address='https://test.open-roberta.org/')
+    rc.tts.say(rc.INITIAL_GREETING)
     rc.update_firmware()
+    rc.tts.say(rc.TOKEN_GREETING)
     rc.connect()
     
 if __name__ == '__main__':

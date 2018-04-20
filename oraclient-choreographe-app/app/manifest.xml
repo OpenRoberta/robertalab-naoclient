@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<package version="0.0.1" uuid="OpenRobertaClient">
+ <names>
+  <name lang="en_US">OpenRobertaClient</name>
+ </names>
+ <descriptions>
+  <description lang="en_US">OpenRoberta client application that allows NAO to communicate directly with lab.open-roberta.org and execute user programs.</description>
+ </descriptions>
+ <supportedLanguages>
+  <language>en_US</language>
+  <language>de_DE</language>
+ </supportedLanguages>
+ <descriptionLanguages>
+  <language>en_US</language>
+  <language>de_DE</language>
+ </descriptionLanguages>
+ <contents>
+  <behaviorContent path=".">
+   <nature>interactive</nature>
+   <permissions/>
+  </behaviorContent>
+ </contents>
+ <requirements>
+  <naoqiRequirement maxVersion="2.1.4.13" minVersion="2.1.4.13"/>
+  <robotRequirement maxHeadVersion="5.0" model="NAO" minBodyVersion="5.0" maxBodyVersion="5.0" minHeadVersion="5.0"/>
+ </requirements>
+ <services>
+  <service autorun="false" execStart="/usr/bin/python2 scripts/main.py" name="main"/>
+ </services>
+</package>

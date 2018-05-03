@@ -20,8 +20,10 @@ import stk.runner
 import stk.events
 import stk.services
 import stk.logging
+
 import backports.ssl.monkey as monkey
 monkey.patch() #patching SSL
+
 from subprocess import call                                                                                                                                                                                                                 
 import json
 from simplejson.decoder import JSONDecodeError
@@ -38,33 +40,10 @@ from naoqi import ALBroker
 from naoqi import ALModule
 from ConfigParser import SafeConfigParser
 import os
+import sys
 
 REACT_TO_TOUCH = None
 memory = None
-
-class ReactToTouch(ALModule):
-    def __init__(self, name):
-        ALModule.__init__(self, name)
-        self.tts = ALProxy("ALTextToSpeech")
-        global memory
-        memory = ALProxy("ALMemory")
-        memory.subscribeToEvent("TouchChanged",
-            "REACT_TO_TOUCH",
-            "on_touched")
-        
-    def set_token(self, token):
-        self.token = token
-        
-    def set_token_greeting(self, greeting):
-        self.token_greeting = greeting
-
-    def on_touched(self, strVarName, value):
-        if 'Head/Touch' in value[0][0]:
-            memory.unsubscribeToEvent("TouchChanged", "REACT_TO_TOUCH")
-            self.tts.say(self.token_greeting)
-            for letter in self.token.lower():
-                self.tts.say(letter)
-            memory.subscribeToEvent("TouchChanged", "REACT_TO_TOUCH", "on_touched")
 
 class ReactToTouch(ALModule):
     def __init__(self, name):
@@ -110,7 +89,7 @@ class RestClient():
     
     def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/', 
                  firmware_version='v2-1-4-3', robot_name='nao'):
-        self.working_directory = '/home/nao/ora-client-app/app/scripts/'
+        self.working_directory = sys.path[0] + '/'
         os.chdir(self.working_directory)
         self.initialize_broker()
         self.DEBUG = True
@@ -143,7 +122,7 @@ class RestClient():
                             'battery': self.get_battery_level(),
                             'menuversion': self.menu_version,
                             'nepoexitvalue': self.last_exit_code
-                        }        
+                        } 
     
     def initialize_broker(self):
         self.myBroker = ALBroker("myBroker", "0.0.0.0", 0, "", 9559)
@@ -324,7 +303,8 @@ class Activity(object):
         self.logger = stk.logging.get_logger(qiapp.session, self.APP_ID)
 
     def on_start(self):
-        rc = RestClient(lab_address='https://test.open-roberta.org')
+        self.s.ALTextToSpeech.say("OpenRobertaClient started")
+        rc = RestClient(lab_address='http://10.116.20.62:1999')
         rc.tts.say(rc.INITIAL_GREETING)
         rc.update_firmware()
         rc.tts.say(rc.TOKEN_GREETING)
@@ -335,6 +315,7 @@ class Activity(object):
         self.qiapp.stop()
 
     def on_stop(self):
+        self.s.ALTextToSpeech.say("OpenRobertaClient stopped")
         self.logger.info("Application finished.")
         self.events.clear()
 

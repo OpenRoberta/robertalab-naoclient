@@ -138,7 +138,6 @@
         <File name="mac" src="scripts/cryptography/hazmat/primitives/mac.py" />
         <File name="padding" src="scripts/cryptography/hazmat/primitives/padding.py" />
         <File name="serialization" src="scripts/cryptography/hazmat/primitives/serialization.py" />
-        <File name="serialization" src="scripts/cryptography/hazmat/primitives/serialization.pyc" />
         <File name="__init__" src="scripts/cryptography/hazmat/primitives/twofactor/__init__.py" />
         <File name="hotp" src="scripts/cryptography/hazmat/primitives/twofactor/hotp.py" />
         <File name="totp" src="scripts/cryptography/hazmat/primitives/twofactor/totp.py" />
@@ -158,7 +157,6 @@
         <File name="codec" src="scripts/idna/codec.py" />
         <File name="compat" src="scripts/idna/compat.py" />
         <File name="core" src="scripts/idna/core.py" />
-        <File name="core" src="scripts/idna/core.pyc" />
         <File name="idnadata" src="scripts/idna/idnadata.py" />
         <File name="intranges" src="scripts/idna/intranges.py" />
         <File name="package_data" src="scripts/idna/package_data.py" />

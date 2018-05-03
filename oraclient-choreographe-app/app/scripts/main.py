@@ -62,7 +62,7 @@ class ReactToTouch(ALModule):
         self.token_greeting = greeting
 
     def on_touched(self, strVarName, value):
-        if 'Head/Touch' in value[0][0]:
+        if 'Head/Touch' in value[1][0] and value[1][1] == True:
             memory.unsubscribeToEvent("TouchChanged", "REACT_TO_TOUCH")
             self.tts.say(self.token_greeting)
             for letter in self.token.lower():
@@ -303,8 +303,7 @@ class Activity(object):
         self.logger = stk.logging.get_logger(qiapp.session, self.APP_ID)
 
     def on_start(self):
-        self.s.ALTextToSpeech.say("OpenRobertaClient started")
-        rc = RestClient(lab_address='http://10.116.20.62:1999')
+        rc = RestClient(lab_address='https://test.open-roberta.org')
         rc.tts.say(rc.INITIAL_GREETING)
         rc.update_firmware()
         rc.tts.say(rc.TOKEN_GREETING)
@@ -315,7 +314,6 @@ class Activity(object):
         self.qiapp.stop()
 
     def on_stop(self):
-        self.s.ALTextToSpeech.say("OpenRobertaClient stopped")
         self.logger.info("Application finished.")
         self.events.clear()
 

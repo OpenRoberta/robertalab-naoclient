@@ -303,7 +303,7 @@ class Activity(object):
         self.logger = stk.logging.get_logger(qiapp.session, self.APP_ID)
 
     def on_start(self):
-        rc = RestClient(lab_address='https://test.open-roberta.org')
+        rc = RestClient()
         rc.tts.say(rc.INITIAL_GREETING)
         rc.update_firmware()
         rc.tts.say(rc.TOKEN_GREETING)

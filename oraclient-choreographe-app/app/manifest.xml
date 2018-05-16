@@ -1,21 +1,22 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<package version="0.0.1" uuid="open_roberta_lab_connector">
+<package version="1.0.1" uuid="robertalab_connector">
  <names>
   <name lang="en_US">Open Roberta Lab Connector</name>
  </names>
  <descriptions>
-  <description lang="en_US">NAO connects automatically to the Open Roberta Lab to receive and execute user programs developed in NEPO programming language.
+  <description lang="en_US">NAO connects automatically to the Open Roberta Lab to receive and execute user programs developed with the visual NEPO programming language via "drag'n drop".
 
-&lt;h3>How it works&lt;h3>
-This app is working in the background. Each time you start NAO the Open Roberta Lab Connector sends it token to the Open Roberta Lab and waits for a user program, provided by the Open Roberta Lab Server to execute it immediately.
-The token consists of the last 8 characters of the MAC address. Please press one of  NAO's head sensors and he will spell the token for you.
-Once you now the token, go to the &lt;a href="https://lab.open-roberta.org" target="_blank">Open Roberta Lab&lt;/a>, choose NAO as your system, click on the robot's icon in the menu, choose »connect ...« and type in the token in the token field. After confirming the input with a click on »OK« your NAO is connected to the Open Roberta Lab
+How it works
 
-Now you can start developing programs with NEPO and execute them immediately on NAO.
+This app is working in the background. Each time you start NAO the Open Roberta Lab Connector sends its token to the Open Roberta Lab and waits for the NEPO program, provided by the Open Roberta Lab Server to execute it immediately.
 
-Have fun programming your NAO with NEPO in the Open Roberta Lab :-)
+The token consists of the last 8 characters of the MAC address. Please press one of NAO's head sensors and it will spell out the token for you.
 
-For more information please have a look into the &lt;a href="http://wiki.open-roberta.org" target="_blank" class="btn btn-lg btn-warning">Open Roberta Wiki&lt;/a>.</description>
+Once you now the token, go to the Open Roberta Lab, choose NAO as your system, click on the robot's icon in the menu, choose »connect ...« and type in the token in the token field. After confirming the input by clicking »OK« your NAO is connected to the Open Roberta Lab.
+
+Now you can start developing programs with NEPO and execute them immediately on NAO. Have fun programming your NAO with NEPO in the Open Roberta Lab :-)
+
+For more information please have a look into the Open Roberta Wiki.</description>
  </descriptions>
  <descriptionLanguages>
   <language>en_US</language>

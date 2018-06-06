@@ -4,17 +4,17 @@ __copyright__ = "Copyright 2018, Fraunhofer IAIS"
 __author__ = 'Artem Vinokurov'
 __email__ = 'artem.vinokurov@iais.fraunhofer.de'
 
-'''                                                                                                                                                                                                                                         
-naoclient.client -- shortdesc                                                                                                                                                                                                               
-naoclient.client is an OpenRoberta rest client                                                                                                                                                                                              
-It defines nao - server communication                                                                                                                                                                                                       
-                                                                                                                                                                                                                                            
-@author:     Artem Vinokurov                                                                                                                                                                                                                
-@copyright:  2017 Fraunhofer IAIS.                                                                                                                                                                                                          
-@license:    GPL 3.0                                                                                                                                                                                                                        
-@contact:    artem.vinokurov@iais.fraunhofer.de                                                                                                                                                                                             
-@deffield    updated: 5 Apr. 2018                                                                                                                                                                                                          
-''' 
+'''
+naoclient.client -- shortdesc
+naoclient.client is an OpenRoberta rest client
+It defines nao - server communication
+
+@author:     Artem Vinokurov
+@copyright:  2017 Fraunhofer IAIS.
+@license:    GPL 3.0
+@contact:    artem.vinokurov@iais.fraunhofer.de
+@deffield    updated: 5 Apr. 2018
+'''
 
 import stk.runner
 import stk.events
@@ -24,17 +24,17 @@ import stk.logging
 import backports.ssl.monkey as monkey
 monkey.patch() #patching SSL
 
-from subprocess import call                                                                                                                                                                                                                 
+from subprocess import call
 import json
 from simplejson.decoder import JSONDecodeError
-import random                                                                                                                                                                                                                               
-import string                                                                                                                                                                                                                               
-from requests import Request, Session                                                                                                                                                                                                       
-from requests.exceptions import ConnectionError                                                                                                                                                                                             
-from uuid import getnode as get_mac                                                                                                                                                                                                         
-import datetime                                                                                                                                                                                                                             
-import time                                                                                                                                                                                                                                 
-import zipfile                                                                                                                                                                                                                              
+import random
+import string
+from requests import Request, Session
+from requests.exceptions import ConnectionError
+from uuid import getnode as get_mac
+import datetime
+import time
+import zipfile
 from naoqi import ALProxy
 from naoqi import ALBroker
 from naoqi import ALModule
@@ -54,10 +54,10 @@ class ReactToTouch(ALModule):
         memory.subscribeToEvent("TouchChanged",
             "REACT_TO_TOUCH",
             "on_touched")
-        
+
     def set_token(self, token):
         self.token = token
-        
+
     def set_token_greeting(self, greeting):
         self.token_greeting = greeting
 
@@ -69,16 +69,16 @@ class ReactToTouch(ALModule):
                 self.tts.say(letter)
             memory.subscribeToEvent("TouchChanged", "REACT_TO_TOUCH", "on_touched")
 
-                                                                                                                                                                                                                                            
-class RestClient():                                                                                                                                                                                                                         
-    '''                                                                                                                                                                                                                                     
-    REST endpoints:                                                                                                                                                                                                                         
-    /rest/pushcmd (controlling the workflow of the system)                                                                                                                                                                                  
-    /rest/download (the user program can be downloaded here)                                                                                                                                                                                
-    /rest/update/ (updates for libraries on the robot can be downloaded here)                                                                                                                                                               
+
+class RestClient():
+    '''
+    REST endpoints:
+    /rest/pushcmd (controlling the workflow of the system)
+    /rest/download (the user program can be downloaded here)
+    /rest/update/ (updates for libraries on the robot can be downloaded here)
     /update/nao/v2-1-4-3/hal - GET new hal
     /update/nao/v2-1-4-3/hal/checksum - GET hal checksum
-    '''    
+    '''
     REGISTER = 'register'
     PUSH = 'push'
     REPEAT = 'repeat'
@@ -86,8 +86,8 @@ class RestClient():
     UPDATE = 'update'
     DOWNLOAD = 'download'
     CONFIGURATION = 'configuration' #not yet used
-    
-    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/', 
+
+    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/',
                  firmware_version='v2-1-4-3', robot_name='nao'):
         self.working_directory = sys.path[0] + '/'
         os.chdir(self.working_directory)
@@ -122,8 +122,8 @@ class RestClient():
                             'battery': self.get_battery_level(),
                             'menuversion': self.menu_version,
                             'nepoexitvalue': self.last_exit_code
-                        } 
-    
+                        }
+
     def initialize_broker(self):
         self.myBroker = ALBroker("myBroker", "0.0.0.0", 0, "", 9559)
         self.tts = ALProxy("ALTextToSpeech")
@@ -131,13 +131,13 @@ class RestClient():
         self.system = ALProxy("ALSystem")
         global REACT_TO_TOUCH
         REACT_TO_TOUCH = ReactToTouch("REACT_TO_TOUCH")
-    
+
     def reinitialize_say_lines(self):
         global REACT_TO_TOUCH
         REACT_TO_TOUCH.set_token_greeting(self.TOKEN_SAY)
         REACT_TO_TOUCH.set_token(self.token)
-        
-    
+
+
     def initialize_translations(self):
         parser = SafeConfigParser()
         parser.read(self.working_directory + 'translations.ini')
@@ -148,7 +148,7 @@ class RestClient():
         self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
         self.INITIAL_GREETING = parser.get(self.language, 'INITIAL_GREETING')
         self.TOKEN_GREETING = parser.get(self.language, 'TOKEN_GREETING')
-    
+
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
             self.log('update server unavailable (cannot get checksum), re-setting number of attempts and continuing further')
@@ -198,12 +198,12 @@ class RestClient():
             self.log('hal library updated, checksum written: ' + checksum)
         else:
             self.log('hal library up to date')
-        
+
     def log(self, message):
         if self.DEBUG:
             print '[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message
             self.debug_log_file.write('[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message + '\n')
-    
+
     def generate_token(self):
         global REACT_TO_TOUCH
         if(self.GENERATE_TOKEN):
@@ -214,17 +214,17 @@ class RestClient():
             token = ''.join(('%012X' % get_mac())[i:i+2] for i in range(4, 12, 2))
             REACT_TO_TOUCH.set_token(token)
             return token
-    
+
     def get_battery_level(self):
         return self.power.getBatteryCharge()
-            
+
     def send_post(self, command, endpoint):
         nao_request = Request('POST', self.lab_address + endpoint)
         nao_request.data = command
         nao_request.headers['Content-Type'] = 'application/json'
         nao_prepared_request = nao_request.prepare()
         return self.nao_session.send(nao_prepared_request, verify=self.SSL_VERIFY)
-    
+
     def download_and_execute_program(self):
         self.command['cmd'] = self.DOWNLOAD
         self.command['nepoexitvalue'] = '0'
@@ -245,7 +245,7 @@ class RestClient():
             self.log('cannot execute user program')
         self.initialize_broker()
         self.reinitialize_say_lines()
-    
+
     def send_push_request(self):
         self.log('started polling at ' + str(datetime.datetime.now()))
         self.command['cmd'] = self.PUSH
@@ -267,7 +267,7 @@ class RestClient():
             time.sleep(10)
             self.connect()
         self.send_push_request()
-    
+
     def connect(self):
         self.log('Robot token: ' + self.token)
         if(self.EASTER_EGG):
@@ -294,15 +294,32 @@ class RestClient():
             time.sleep(10)
             self.connect()
 
-class Activity(object):
+class OpenRobertaClient(object):
     APP_ID = "de.fhg.iais.roberta.OpenRobertaClient"
     def __init__(self, qiapp):
         self.qiapp = qiapp
+        self.session = qiapp.session
         self.events = stk.events.EventHelper(qiapp.session)
         self.s = stk.services.ServiceCache(qiapp.session)
         self.logger = stk.logging.get_logger(qiapp.session, self.APP_ID)
 
+    def _wait_for_service(self, service_name, max_delay_in_seconds=60):
+        for i in range(max_delay_in_seconds):
+            try:
+                service = self.session.service(service_name)
+                return True
+            except RuntimeError:
+                time.sleep(1.0)
+                return
+        # Failed, give up
+
     def on_start(self):
+        self._wait_for_service("ALTextToSpeech")
+        self._wait_for_service("ALBattery")
+        self._wait_for_service("ALSystem")
+        # unregister REACT_TO_TOUCH if it's already running (it shouldn't be)
+        if self.s.REACT_TO_TOUCH:
+            self.s.REACT_TO_TOUCH.stop()
         rc = RestClient()
         rc.tts.say(rc.INITIAL_GREETING)
         rc.update_firmware()
@@ -318,4 +335,4 @@ class Activity(object):
         self.events.clear()
 
 if __name__ == "__main__":
-    stk.runner.run_activity(Activity)                                                                                                                                                                                                                                        
+    stk.runner.run_service(OpenRobertaClient)

@@ -21,17 +21,12 @@ For more information please have a look into the Open Roberta Wiki.</description
  <descriptionLanguages>
   <language>en_US</language>
  </descriptionLanguages>
- <contents>
-  <behaviorContent path=".">
-   <nature>interactive</nature>
-   <permissions/>
-  </behaviorContent>
- </contents>
+ <contents/>
  <requirements>
   <naoqiRequirement maxVersion="2.1.4.13" minVersion="2.1.4.13"/>
   <robotRequirement maxHeadVersion="5.0" model="NAO_H25" minBodyVersion="5.0" maxBodyVersion="5.0" minHeadVersion="5.0"/>
  </requirements>
  <services>
-  <service autorun="false" execStart="/usr/bin/python2 scripts/main.py" name="main"/>
+  <service autorun="true" execStart="/usr/bin/python2 scripts/main.py" name="main"/>
  </services>
 </package>

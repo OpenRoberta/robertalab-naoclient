@@ -27,6 +27,6 @@ For more information please have a look into the Open Roberta Wiki.</description
   <robotRequirement maxHeadVersion="5.0" model="NAO_H25" minBodyVersion="5.0" maxBodyVersion="5.0" minHeadVersion="5.0"/>
  </requirements>
  <services>
-  <service autorun="true" execStart="/usr/bin/python2 scripts/main.py" name="main"/>
+  <service autorun="true" execStart="/usr/bin/python2 scripts/main.py" name="robertalab"/>
  </services>
 </package>

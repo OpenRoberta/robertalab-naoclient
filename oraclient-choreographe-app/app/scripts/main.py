@@ -22,9 +22,9 @@ import stk.services
 import stk.logging
 
 import backports.ssl.monkey as monkey
-monkey.patch() #patching SSL
+monkey.patch()  # patching SSL
 
-from subprocess import call
+from subprocess import call, Popen
 import json
 from simplejson.decoder import JSONDecodeError
 import random
@@ -42,18 +42,65 @@ from ConfigParser import SafeConfigParser
 import os
 import sys
 
+
 REACT_TO_TOUCH = None
+ProgramManager = None
 memory = None
+
+
+class ProgramManagerModule(ALModule):
+    def __init__(self, name):
+        ALModule.__init__(self, name)
+
+    def set_running_program_process(self, program_process):
+        self.program_process = program_process
+
+    def subscribe_event(self):
+        try:
+            global memory
+            memory.subscribeToEvent("TouchChanged",
+                                    "ProgramManager",
+                                    "on_touched")
+        except Exception as e:
+            print str(e)
+
+    def unsubscribe_event(self):
+        try:
+            global memory
+            memory.unsubscribeToEvent("TouchChanged", "ProgramManager")
+        except Exception as e:
+            print str(e)
+
+    def __collect_touched_sensors(self, sensors):
+        touched_bodies = []
+        for s in sensors:
+            if s[1]:
+                touched_bodies.append(s[0])
+        return touched_bodies
+
+    def __kill_program(self):
+        print("Killing process with pid %s " %
+              self.program_process.pid)
+        self.program_process.kill()
+
+    def on_touched(self, strVarName, values):
+        """This will be called each time when there is touch."""
+        try:
+            self.unsubscribe_event()
+            touched_bodies = self.__collect_touched_sensors(values)
+            if len(touched_bodies) > 2:
+                self.__kill_program()
+        except Exception as e:
+            print str(e)
+        finally:
+            self.subscribe_event()
+
 
 class ReactToTouch(ALModule):
     def __init__(self, name):
         ALModule.__init__(self, name)
         self.tts = ALProxy("ALTextToSpeech")
-        global memory
-        memory = ALProxy("ALMemory")
-        memory.subscribeToEvent("TouchChanged",
-            "REACT_TO_TOUCH",
-            "on_touched")
+        self.subscribe_event()
 
     def set_token(self, token):
         self.token = token
@@ -61,13 +108,36 @@ class ReactToTouch(ALModule):
     def set_token_greeting(self, greeting):
         self.token_greeting = greeting
 
-    def on_touched(self, strVarName, value):
-        if 'Head/Touch' in value[1][0] and value[1][1] == True:
+    def unsubscribe_event(self):
+        try:
+            self.tts.stopAll()
+            global memory
             memory.unsubscribeToEvent("TouchChanged", "REACT_TO_TOUCH")
-            self.tts.say(self.token_greeting)
-            for letter in self.token.lower():
-                self.tts.say(letter)
-            memory.subscribeToEvent("TouchChanged", "REACT_TO_TOUCH", "on_touched")
+        except Exception as e:
+            print e
+
+    def subscribe_event(self):
+        try:
+            global memory
+            memory.subscribeToEvent(
+                "TouchChanged", "REACT_TO_TOUCH", "on_touched")
+        except Exception as e:
+            print e
+
+    def on_touched(self, strVarName, values):
+        """This will be called each time when there is touch."""
+        try:
+            self.unsubscribe_event()
+            for value in values:
+                if 'Head/Touch' in value[0] and value[1] == True:
+                    self.tts.say(self.token_greeting)
+                    for letter in self.token.lower():
+                        self.tts.say(letter)
+                    break
+        except Exception as e:
+            print e
+        finally:
+            self.subscribe_event()
 
 
 class RestClient():
@@ -85,7 +155,7 @@ class RestClient():
     ABORT = 'abort'
     UPDATE = 'update'
     DOWNLOAD = 'download'
-    CONFIGURATION = 'configuration' #not yet used
+    CONFIGURATION = 'configuration'  # not yet used
 
     def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/',
                  firmware_version='v2-1-4-3', robot_name='nao'):
@@ -104,39 +174,44 @@ class RestClient():
         self.robot_name = robot_name
         self.menu_version = __version__
         self.nao_session = Session()
-        self.mac_address = '-'.join(('%012X' % get_mac())[i:i+2] for i in range(0, 12, 2))
+        self.mac_address = '-'.join(('%012X' %
+                                     get_mac())[i:i+2] for i in range(0, 12, 2))
         self.token = self.generate_token()
         self.language = self.tts.getLanguage()
         self.last_exit_code = '0'
-        self.update_attempts = 36 # 6 minutes of attempts
-        self.debug_log_file = open(self.working_directory + 'ora_client.debug', 'w')
+        self.update_attempts = 36  # 6 minutes of attempts
+        self.debug_log_file = open(
+            self.working_directory + 'ora_client.debug', 'w')
         self.initialize_translations()
         self.command = {
-                            'firmwarename': self.firmware_name,
-                            'robot': self.robot_name,
-                            'macaddr': self.mac_address,
-                            'cmd': self.REGISTER,
-                            'firmwareversion': self.firmware_version,
-                            'token': self.token,
-                            'brickname': self.brick_name,
-                            'battery': self.get_battery_level(),
-                            'menuversion': self.menu_version,
-                            'nepoexitvalue': self.last_exit_code
-                        }
+            'firmwarename': self.firmware_name,
+            'robot': self.robot_name,
+            'macaddr': self.mac_address,
+            'cmd': self.REGISTER,
+            'firmwareversion': self.firmware_version,
+            'token': self.token,
+            'brickname': self.brick_name,
+            'battery': self.get_battery_level(),
+            'menuversion': self.menu_version,
+            'nepoexitvalue': self.last_exit_code
+        }
 
     def initialize_broker(self):
         self.myBroker = ALBroker("myBroker", "0.0.0.0", 0, "", 9559)
+        global memory
+        memory = ALProxy("ALMemory")
         self.tts = ALProxy("ALTextToSpeech")
         self.power = ALProxy("ALBattery")
         self.system = ALProxy("ALSystem")
         global REACT_TO_TOUCH
         REACT_TO_TOUCH = ReactToTouch("REACT_TO_TOUCH")
+        global ProgramManager
+        ProgramManager = ProgramManagerModule('ProgramManager')
 
     def reinitialize_say_lines(self):
         global REACT_TO_TOUCH
         REACT_TO_TOUCH.set_token_greeting(self.TOKEN_SAY)
         REACT_TO_TOUCH.set_token(self.token)
-
 
     def initialize_translations(self):
         parser = SafeConfigParser()
@@ -144,23 +219,29 @@ class RestClient():
         self.TOKEN_SAY = parser.get(self.language, 'TOKEN_SAY')
         global REACT_TO_TOUCH
         REACT_TO_TOUCH.set_token_greeting(self.TOKEN_SAY)
-        self.UPDATE_SERVER_DOWN_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_SAY')
-        self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
+        self.UPDATE_SERVER_DOWN_SAY = parser.get(
+            self.language, 'UPDATE_SERVER_DOWN_SAY')
+        self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY = parser.get(
+            self.language, 'UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY')
         self.INITIAL_GREETING = parser.get(self.language, 'INITIAL_GREETING')
         self.TOKEN_GREETING = parser.get(self.language, 'TOKEN_GREETING')
 
     def get_checksum(self, attempts_left):
         if (attempts_left < 1):
-            self.log('update server unavailable (cannot get checksum), re-setting number of attempts and continuing further')
+            self.log(
+                'update server unavailable (cannot get checksum), re-setting number of attempts and continuing further')
             self.tts.say(self.UPDATE_SERVER_DOWN_SAY)
-            attempts_left = 36 # 6 minutes more of attempts
+            attempts_left = 36  # 6 minutes more of attempts
         try:
-            nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
+            nao_request = Request(
+                'GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal/checksum')
             nao_prepared_request = nao_request.prepare()
-            server_response = self.nao_session.send(nao_prepared_request, verify=self.SSL_VERIFY)
+            server_response = self.nao_session.send(
+                nao_prepared_request, verify=self.SSL_VERIFY)
             return server_response.content
         except ConnectionError:
-            self.log('update server unavailable, sleeping for 10 seconds before next attempt')
+            self.log(
+                'update server unavailable, sleeping for 10 seconds before next attempt')
             time.sleep(10)
             return self.get_checksum(attempts_left - 1)
 
@@ -176,18 +257,22 @@ class RestClient():
         hash_value = f.readline()
         if hash_value != checksum:
             self.log('updating hal library')
-            nao_request = Request('GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal')
+            nao_request = Request(
+                'GET', self.lab_address + '/update/nao/' + self.firmware_version + '/hal')
             nao_prepared_request = nao_request.prepare()
-            server_response = self.nao_session.send(nao_prepared_request, verify=self.SSL_VERIFY)
+            server_response = self.nao_session.send(
+                nao_prepared_request, verify=self.SSL_VERIFY)
             try:
                 with open(server_response.headers['Filename'], 'w') as f:
                     f.write(server_response.content)
             except KeyError:
                 if hash_value != 'NOHASH':
-                    self.log('no update file was found on the server, however server is up, continuing with old hal')
+                    self.log(
+                        'no update file was found on the server, however server is up, continuing with old hal')
                     return
                 else:
-                    self.log('no update file was found on the server and no hal present, shutting down client')
+                    self.log(
+                        'no update file was found on the server and no hal present, shutting down client')
                     self.tts.say(self.UPDATE_SERVER_DOWN_HAL_NOT_FOUND_SAY)
                     exit(0)
             zip_ref = zipfile.ZipFile(server_response.headers['Filename'], 'r')
@@ -202,16 +287,19 @@ class RestClient():
     def log(self, message):
         if self.DEBUG:
             print '[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message
-            self.debug_log_file.write('[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message + '\n')
+            self.debug_log_file.write(
+                '[DEBUG] - ' + str(datetime.datetime.now()) + ' - ' + message + '\n')
 
     def generate_token(self):
         global REACT_TO_TOUCH
         if(self.GENERATE_TOKEN):
-            token = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(self.token_length))
+            token = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                            for _ in range(self.token_length))
             REACT_TO_TOUCH.set_token(token)
             return token
         else:
-            token = ''.join(('%012X' % get_mac())[i:i+2] for i in range(4, 12, 2))
+            token = ''.join(('%012X' % get_mac())[
+                i:i+2] for i in range(4, 12, 2))
             REACT_TO_TOUCH.set_token(token)
             return token
 
@@ -230,21 +318,34 @@ class RestClient():
         self.command['nepoexitvalue'] = '0'
         download_command = json.dumps(self.command)
         server_response = self.send_post(download_command, '/download')
-        program_name = self.working_directory + server_response.headers['Filename']
+        program_name = self.working_directory + \
+            server_response.headers['Filename']
         with open(program_name, 'w') as f:
             f.write(server_response.content)
-        self.log('program downloaded, filename: ' + server_response.headers['Filename'])
-        self.myBroker.shutdown()
+        self.log('program downloaded, filename: ' +
+                 server_response.headers['Filename'])
+        # self.myBroker.shutdown()
+        global REACT_TO_TOUCH
+        REACT_TO_TOUCH.unsubscribe_event()
+        global ProgramManager
+        ProgramManager.subscribe_event()
+
         try:
             self.log('starting user program execution')
-            call(['python', program_name])
+            prog_proc = Popen(['python', program_name])
+            ProgramManager.set_running_program_process(prog_proc)
+            prog_proc.communicate()
             self.log('user program execution finished')
             self.last_exit_code = '0'
-        except Exception:
+        except Exception as e:
+            print e
             self.last_exit_code = '2'
             self.log('cannot execute user program')
-        self.initialize_broker()
-        self.reinitialize_say_lines()
+
+        REACT_TO_TOUCH.subscribe_event()
+        ProgramManager.unsubscribe_event()
+        # self.initialize_broker()
+        # self.reinitialize_say_lines()
 
     def send_push_request(self):
         self.log('started polling at ' + str(datetime.datetime.now()))
@@ -254,7 +355,8 @@ class RestClient():
         try:
             server_response = self.send_post(push_command, '/pushcmd')
             if server_response.json()['cmd'] == 'repeat':
-                self.log('received response at ' + str(datetime.datetime.now()))
+                self.log('received response at ' +
+                         str(datetime.datetime.now()))
             elif server_response.json()['cmd'] == 'download':
                 self.log('download issued')
                 self.download_and_execute_program()
@@ -290,12 +392,15 @@ class RestClient():
             time.sleep(10)
             self.connect()
         except JSONDecodeError:
-            self.log('JSON decoding error (robot was not registered within timeout), reconnecting in 10 seconds...')
+            self.log(
+                'JSON decoding error (robot was not registered within timeout), reconnecting in 10 seconds...')
             time.sleep(10)
             self.connect()
 
+
 class OpenRobertaClient(object):
     APP_ID = "de.fhg.iais.roberta.OpenRobertaClient"
+
     def __init__(self, qiapp):
         self.qiapp = qiapp
         self.session = qiapp.session
@@ -320,6 +425,8 @@ class OpenRobertaClient(object):
         # unregister REACT_TO_TOUCH if it's already running (it shouldn't be)
         if self.s.REACT_TO_TOUCH:
             self.s.REACT_TO_TOUCH.stop()
+        if self.s.ProgramManager:
+            self.s.ProgramManager.stop()
         rc = RestClient()
         rc.tts.say(rc.INITIAL_GREETING)
         rc.update_firmware()
@@ -333,6 +440,7 @@ class OpenRobertaClient(object):
     def on_stop(self):
         self.logger.info("Application finished.")
         self.events.clear()
+
 
 if __name__ == "__main__":
     stk.runner.run_service(OpenRobertaClient)

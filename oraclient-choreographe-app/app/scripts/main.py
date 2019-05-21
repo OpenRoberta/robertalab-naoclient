@@ -21,9 +21,6 @@ import stk.events
 import stk.services
 import stk.logging
 
-import backports.ssl.monkey as monkey
-monkey.patch()  # patching SSL
-
 from subprocess import call, Popen
 import json
 from simplejson.decoder import JSONDecodeError

@@ -11,7 +11,6 @@
         <File name="logging" src="scripts/stk/logging.py" />
         <File name="runner" src="scripts/stk/runner.py" />
         <File name="services" src="scripts/stk/services.py" />
-        <File name="libffi-56d8fba3.so.6.0" src="scripts/.libs_cffi_backend/libffi-56d8fba3.so.6.0.4" />
         <File name="__init__" src="scripts/__init__.py" />
         <File name="translations" src="scripts/translations.ini" />
     </Resources>

@@ -23,8 +23,8 @@ For more information please have a look into the Open Roberta Wiki.</description
  </descriptionLanguages>
  <contents/>
  <requirements>
-  <naoqiRequirement minVersion="2.1.4.13" maxVersion="2.1.4.13"/>
-  <robotRequirement maxBodyVersion="5.0" minHeadVersion="5.0" model="NAO_H25" maxHeadVersion="5.0" minBodyVersion="5.0"/>
+  <naoqiRequirement minVersion="2.8" maxVersion="2.8"/>
+  <robotRequirement model="NAO"/>
  </requirements>
  <services>
   <service autorun="true" name="robertalab" execStart="/usr/bin/python2 scripts/main.py"/>

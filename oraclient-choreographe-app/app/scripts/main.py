@@ -1,6 +1,6 @@
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
-__copyright__ = "Copyright 2018, Fraunhofer IAIS"
+__copyright__ = "Copyright 2017-2019, Fraunhofer IAIS"
 __author__ = 'Artem Vinokurov'
 __email__ = 'artem.vinokurov@iais.fraunhofer.de'
 
@@ -10,10 +10,10 @@ naoclient.client is an OpenRoberta rest client
 It defines nao - server communication
 
 @author:     Artem Vinokurov
-@copyright:  2017 Fraunhofer IAIS.
+@copyright:  2017-2019 Fraunhofer IAIS.
 @license:    GPL 3.0
 @contact:    artem.vinokurov@iais.fraunhofer.de
-@deffield    updated: 5 Apr. 2018
+@deffield    updated: 23 May 2019
 '''
 
 import stk.runner
@@ -143,8 +143,8 @@ class RestClient():
     /rest/pushcmd (controlling the workflow of the system)
     /rest/download (the user program can be downloaded here)
     /rest/update/ (updates for libraries on the robot can be downloaded here)
-    /update/nao/v2-1-4-3/hal - GET new hal
-    /update/nao/v2-1-4-3/hal/checksum - GET hal checksum
+    /update/nao/2-8/hal - GET new hal
+    /update/nao/2-8/hal/checksum - GET hal checksum
     '''
     REGISTER = 'register'
     PUSH = 'push'
@@ -154,8 +154,8 @@ class RestClient():
     DOWNLOAD = 'download'
     CONFIGURATION = 'configuration'  # not yet used
 
-    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/',
-                 firmware_version='v2-1-4-3', robot_name='nao'):
+    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org',
+                 firmware_version='2-8', robot_name='nao'):
         self.working_directory = sys.path[0] + '/'
         os.chdir(self.working_directory)
         self.initialize_broker()

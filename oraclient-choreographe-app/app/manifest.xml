@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<package version="1.0.1" uuid="robertalab_connector">
+<package version="1.0.2" uuid="robertalab_connector">
  <names>
   <name lang="en_US">Open Roberta Lab Connector</name>
  </names>
@@ -23,7 +23,7 @@ For more information please have a look into the Open Roberta Wiki.</description
  </descriptionLanguages>
  <contents/>
  <requirements>
-  <naoqiRequirement minVersion="2.8" maxVersion="2.8"/>
+  <naoqiRequirement maxVersion="2.8" minVersion="2.8"/>
   <robotRequirement model="NAO"/>
  </requirements>
  <services>

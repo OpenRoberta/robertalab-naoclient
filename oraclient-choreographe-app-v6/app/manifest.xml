@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<package version="1.0.2" uuid="robertalab_connector">
+<package uuid="robertalab_connector" version="1.0.3">
  <names>
   <name lang="en_US">Open Roberta Lab Connector</name>
  </names>
@@ -8,13 +8,10 @@
 
 How it works
 
-This app is working in the background. Each time you start NAO the Open Roberta Lab Connector sends its token to the Open Roberta Lab and waits for the NEPO program, provided by the Open Roberta Lab Server to execute it immediately.
-
-The token consists of the last 8 characters of the MAC address. Please press one of NAO's head sensors and it will spell out the token for you.
-
-Once you now the token, go to the Open Roberta Lab, choose NAO as your system, click on the robot's icon in the menu, choose »connect ...« and type in the token in the token field. After confirming the input by clicking »OK« your NAO is connected to the Open Roberta Lab.
-
-Now you can start developing programs with NEPO and execute them immediately on NAO. Have fun programming your NAO with NEPO in the Open Roberta Lab :-)
+This app is working in the background. Once NAO has started, he connects automatically to the Open Roberta Lab and waits for a NEPO program. To connect your NAO to your programming session in the Open Roberta Lab, you have to provide a token which belongs to your NAO.
+Please press one of NAO's head sensors and it will spell out the token for you. The token consists of a combination of 8 letters and numbers, they are unique for each NAO and you may want to write them down.
+Once you know the token, go to the Open Roberta Lab, choose NAO as your system, click on the robot's icon in the menu, choose »connect ...« and type the token into the token field. After confirming the input by clicking »OK«, your NAO is connected to the Open Roberta Lab.
+Now you can start developing programs with NEPO and execute them immediately on your NAO. Have fun programming NAO with NEPO in the Open Roberta Lab :-)
 
 For more information please have a look into the Open Roberta Wiki.</description>
  </descriptions>
@@ -23,10 +20,10 @@ For more information please have a look into the Open Roberta Wiki.</description
  </descriptionLanguages>
  <contents/>
  <requirements>
-  <naoqiRequirement maxVersion="2.8" minVersion="2.8"/>
+  <naoqiRequirement minVersion="2.8" maxVersion="2.8"/>
   <robotRequirement model="NAO"/>
  </requirements>
  <services>
-  <service autorun="true" name="robertalab" execStart="/usr/bin/python2 scripts/main.py"/>
+  <service name="robertalab" execStart="/usr/bin/python2 scripts/main.py" autorun="true"/>
  </services>
 </package>

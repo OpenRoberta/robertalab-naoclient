@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Package name="OpenRobertaClient" format_version="4">
     <Manifest src="manifest.xml" />
-    <BehaviorDescriptions />
+    <BehaviorDescriptions>
+        <BehaviorDescription name="behavior" src="." xar="behavior.xar" />
+    </BehaviorDescriptions>
     <Dialogs />
     <Resources>
         <File name="icon" src="icon.png" />
@@ -164,5 +166,8 @@
         <File name="translations" src="scripts/translations.ini" />
     </Resources>
     <Topics />
-    <IgnoredPaths />
+    <IgnoredPaths>
+        <Path src="scripts/enum/__pycache__/__init__.cpython-37.pyc" />
+        <Path src="scripts/enum/__pycache__" />
+    </IgnoredPaths>
 </Package>

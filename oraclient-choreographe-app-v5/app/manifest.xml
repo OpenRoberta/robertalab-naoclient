@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<package version="1.0.2" uuid="robertalab_connector">
+<package version="1.0.6" uuid="v5_robertalab_connector">
  <names>
-  <name lang="en_US">Open Roberta Lab Connector</name>
+  <name lang="en_US">V5 Open Roberta Lab Connector</name>
  </names>
  <descriptions>
   <description lang="en_US">NAO connects automatically to the Open Roberta Lab to receive and execute user programs developed with the visual NEPO programming language via "drag'n drop".

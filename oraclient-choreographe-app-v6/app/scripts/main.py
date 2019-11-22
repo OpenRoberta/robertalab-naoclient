@@ -1,20 +1,9 @@
-__version__ = "0.0.2"
-
-__copyright__ = "Copyright 2017-2019, Fraunhofer IAIS"
-__author__ = 'Artem Vinokurov'
-__email__ = 'artem.vinokurov@iais.fraunhofer.de'
-
 '''
 naoclient.client -- shortdesc
 naoclient.client is an OpenRoberta rest client
 It defines nao - server communication
-
-@author:     Artem Vinokurov
-@copyright:  2017-2019 Fraunhofer IAIS.
-@license:    GPL 3.0
-@contact:    artem.vinokurov@iais.fraunhofer.de
-@deffield    updated: 23 May 2019
 '''
+__version__ = "1.0.5"
 
 import stk.runner
 import stk.events

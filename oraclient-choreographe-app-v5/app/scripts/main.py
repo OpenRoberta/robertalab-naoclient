@@ -405,7 +405,7 @@ class OpenRobertaClient(object):
                 return True
             except RuntimeError:
                 time.sleep(1.0)
-                return
+        return
         # Failed, give up
 
     def on_start(self):

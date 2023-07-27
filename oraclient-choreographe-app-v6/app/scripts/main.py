@@ -143,7 +143,7 @@ class RestClient():
     DOWNLOAD = 'download'
     CONFIGURATION = 'configuration'  # not yet used
 
-    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org',
+    def __init__(self, token_length=8, lab_address='https://lab.open-roberta.org/rest',
                  firmware_version='2-8', robot_name='nao'):
         self.working_directory = sys.path[0] + '/'
         os.chdir(self.working_directory)
